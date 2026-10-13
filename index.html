@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Agro IoT - Estação IOT</title>
+  
+  <!-- Biblioteca de Ícones Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  
+  <!-- Biblioteca Chart.js + Plugin de Linhas de Anotação -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.2.1/dist/chartjs-plugin-annotation.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: #0b0f19;
+      color: #e2e8f0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .weather-card {
+      background-color: #131b2e;
+      border: 1px solid #1e293b;
+      border-radius: 20px;
+      padding: 24px;
+      width: 100%;
+      max-width: 640px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+    }
+
+    .app-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 12px;
+      margin-bottom: 16px;
+    }
+
+    .app-header h1 {
+      font-size: 18px;
+      color: #38bdf8;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .location-header {
+      margin-bottom: 20px;
+    }
+
+    .location-header h2 {
+      font-size: 20px;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .location-header p {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+
+    /* Bloco Principal de Temperatura */
+    .main-weather {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .weather-icon-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .weather-icon-wrapper i {
+      font-size: 48px;
+      color: #f59e0b;
+    }
+
+    .weather-description {
+      font-size: 14px;
+      color: #cbd5e1;
+      font-weight: 500;
+    }
+
+    .temperature-box {
+      font-size: 48px;
+      font-weight: 800;
+      color: #f8fafc;
+      font-family: monospace;
+    }
+
+    .temperature-box .unit {
+      font-size: 24px;
+      font-weight: 400;
+      color: #94a3b8;
+      margin-left: 2px;
+    }
+
+    /* Grid de Sensores */
+    .weather-details {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .detail-card {
+      background-color: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .detail-card i {
+      font-size: 26px;
+      color: #38bdf8;
+    }
+
+    .detail-card .label {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: #94a3b8;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .detail-card .value {
+      font-size: 16px;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-top: 2px;
+    }
+
+    .card-full {
+      grid-column: span 2;
+    }
+
+    /* Módulo de Irrigação e Tendência */
+    .irrigation-alert {
+      background-color: #1a2234;
+      border: 1px solid #2d3748;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .irrigation-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .irrigation-header h3 {
+      font-size: 13px;
+      color: #cbd5e1;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #475569;
+      color: #fff;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 220px;
+      width: 100%;
+      margin-top: 6px;
+    }
+
+    .chart-legend {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      margin-top: 10px;
+      font-size: 11px;
+      color: #94a3b8;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-line {
+      width: 16px;
+      height: 3px;
+      border-radius: 2px;
+    }
+
+    /* Seção de Previsão dos Próximos Dias */
+    .forecast-section {
+      margin-bottom: 16px;
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 16px;
+      padding: 16px;
+    }
+
+    .forecast-section h3 {
+      font-size: 13px;
+      text-transform: uppercase;
+      color: #38bdf8;
+      margin-bottom: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .forecast-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(95px, 1fr));
+      gap: 10px;
+    }
+
+    .forecast-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      padding: 12px 8px;
+      border-radius: 12px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .forecast-day {
+      font-size: 11px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .forecast-icon {
+      font-size: 24px;
+      margin: 4px 0;
+    }
+
+    .forecast-temp {
+      font-size: 13px;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+
+    .forecast-rain {
+      font-size: 11px;
+      color: #38bdf8;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    footer#fonte {
+      border-top: 1px solid #1e293b;
+      padding-top: 12px;
+      font-size: 11px;
+      color: #64748b;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+
+  <main class="weather-card">
+    
+    <!-- CABEÇALHO -->
+    <header class="app-header">
+      <h1>Estação IOT IoT</h1>
+      <span style="font-size: 11px; color: #10b981; font-weight: bold;">● CONECTADO</span>
+    </header>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <article id="weather-content">
+      
+      <!-- Localidade -->
+      <header class="location-header">
+        <h2>
+          <i class="ph ph-map-pin"></i> 
+          <span>Estação de Campo (Fazenda)</span>
+        </h2>
+        <p id="current-date">Sincronizando com a estação...</p>
+      </header>
+
+      <!-- Temperatura Principal -->
+      <section class="main-weather">
+        <div class="weather-icon-wrapper">
+          <i id="weather-icon" class="ph ph-sun"></i>
+          <div>
+            <div id="weather-description" class="weather-description">Buscando dados...</div>
+            <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">Sensor DHT22 IoT</div>
+          </div>
+        </div>
+
+        <div class="temperature-box">
+          <span id="temperature">--</span><span class="unit">°C</span>
+        </div>
+      </section>
+
+      <!-- Grid de Sensores -->
+      <section class="weather-details">
+        
+        <!-- Vento (Satélite) -->
+        <div class="detail-card">
+          <i class="ph ph-wind"></i>
+          <div>
+            <div class="label">Vento</div>
+            <div class="value" id="wind-speed">-- km/h</div>
+          </div>
+        </div>
+
+        <!-- Umidade do Ar (Estação IoT) -->
+        <div class="detail-card">
+          <i class="ph ph-drop"></i>
+          <div>
+            <div class="label">Umidade Ar</div>
+            <div class="value" id="humidity">--%</div>
+          </div>
+        </div>
+
+        <!-- Solo Multinível 15cm e 30cm (Estação IoT) -->
+        <div class="detail-card card-full" style="border-left: 3px solid #10b981;">
+          <i class="ph ph-plant" style="color: #10b981;"></i>
+          <div style="width: 100%;">
+            <div class="label">Umidade do Solo (Estação IoT)</div>
+            <div style="display: flex; gap: 24px; margin-top: 4px;">
+              <div>15 cm: <strong id="soil-15" style="color: #10b981; font-size: 18px; font-family: monospace;">--%</strong></div>
+              <div>30 cm: <strong id="soil-30" style="color: #38bdf8; font-size: 18px; font-family: monospace;">--%</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pressão Atmosférica (Estação IoT BMP180) -->
+        <div class="detail-card">
+          <i class="ph ph-gauge"></i>
+          <div>
+            <div class="label">Pressão</div>
+            <div class="value" id="pressure">-- hPa</div>
+          </div>
+        </div>
+
+        <!-- Radiação Solar (Satélite) -->
+        <div class="detail-card">
+          <i class="ph ph-sun-dim"></i>
+          <div>
+            <div class="label">Radiação</div>
+            <div class="value" id="solar-radiation">-- W/m²</div>
+          </div>
+        </div>
+
+        <!-- Evapotranspiração de Referência ETo (Calculada FAO-56) -->
+        <div class="detail-card" style="border-left: 3px solid #f59e0b;">
+          <i class="ph ph-drop-half-bottom" style="color: #f59e0b;"></i>
+          <div>
+            <div class="label">ETo (FAO-56)</div>
+            <div class="value" id="eto-value" style="color: #f59e0b;">-- mm/dia</div>
+          </div>
+        </div>
+
+        <!-- Precipitação / Sensor de Chuva (Estação IoT) -->
+        <div class="detail-card">
+          <i class="ph ph-cloud-rain"></i>
+          <div>
+            <div class="label">Precipitação</div>
+            <div class="value" id="precipitation" style="font-size: 13px;">--</div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- Módulo de Manejo de Irrigação com Curva Contínua de Tendência -->
+      <section class="irrigation-alert">
+        <div class="irrigation-header">
+          <h3>
+            <i class="ph ph-chart-line-up" style="color: #10b981;"></i>
+            Dinâmica Hídrica: -6h Observadas + 6h Projeção
+          </h3>
+          <div id="irrigation-status-badge" class="status-badge">Carregando...</div>
+        </div>
+
+        <div style="font-size: 11px; color: #94a3b8; margin-bottom: 6px;">
+          Curva contínua baseada no histórico de secagem e evapotranspiração da cultura:
+        </div>
+
+        <!-- Canvas do Gráfico de Linha de Tendência -->
+        <div class="chart-container">
+          <canvas id="moisture-chart"></canvas>
+        </div>
+
+        <!-- Legenda Visual das Linhas -->
+        <div class="chart-legend">
+          <div class="legend-item">
+            <span class="legend-line" style="background: #10b981;"></span>
+            <span>Histórico Observado (Últimas 6h)</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-line" style="background: #38bdf8; border-top: 2px dashed #38bdf8;"></span>
+            <span>Tendência Projetada (+6h)</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-line" style="background: #ef4444; border-top: 2px dashed #ef4444;"></span>
+            <span>Estresse Crítico: <strong id="lbl-crit">8.8%</strong></span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-line" style="background: #10b981; border-top: 2px dashed #10b981;"></span>
+            <span>Cap. de Campo: <strong id="lbl-cc">12.0%</strong></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Previsão dos Próximos 5 Dias (API Satélite Open-Meteo) -->
+      <section class="forecast-section">
+        <h3>
+          <i class="ph ph-calendar-blank"></i>
+          Previsão dos Próximos 5 Dias (Satélite Open-Meteo)
+        </h3>
+        <div class="forecast-container" id="forecast-container">
+          <div style="color: #94a3b8; font-size: 12px;">Carregando previsão do satélite...</div>
+        </div>
+      </section>
+
+    </article>
+    
+    <footer id="fonte">
+      <span>Fonte: <strong>Estação Estação IOT IoT + Satélite Open-Meteo</strong></span>
+    </footer>
+  </main>
+
+  <script>
+    // =========================================================================
+    // PARÂMETROS AGRONÔMICOS CLAROS E CONFIGURÁVEIS (CAFÉ / SOLO ARENOSO)
+    // =========================================================================
+    const CULTURA_NOME            = "Café";
+    const TIPO_SOLO               = "Solo Arenoso";
+    const CAPACIDADE_DE_CAMPO     = 12.0; // Umidade Ótima (%)
+    const LIMIAR_ESTRESSE_CRITICO = 8.8;  // Linha Crítica de Estresse (%) - IRRIGAR!
+    const PONTO_MURCHA_PERM       = 4.0;  // Ponto de Murcha Permanente (%)
+
+    const ALTITUDE_METROS = 680;
+    const LATITUDE        = -22.9056;
+    const LONGITUDE       = -47.0608;
+
+    const FIRESTORE_URL = 
+      "https://firestore.googleapis.com/v1/projects/gen-lang-client-0853696923" +
+      "/databases/ai-studio-remixagroirrigam-5a5bb94c-bad7-4521-b4d3-c959f2e7b3a6" +
+      "/documents:runQuery?key=AIzaSyAafzTja9e_zsRTK3HfoI0hwXGcygbAQiE";
+
+    let chartInstancia = null;
+
+    document.getElementById("lbl-cc").textContent = `${CAPACIDADE_DE_CAMPO.toFixed(1)}%`;
+    document.getElementById("lbl-crit").textContent = `${LIMIAR_ESTRESSE_CRITICO.toFixed(1)}%`;
+
+    function decodificar(c) {
+      if (!c) return null;
+      if ("doubleValue" in c) return Number(c.doubleValue);
+      if ("integerValue" in c) return Number(c.integerValue);
+      if ("stringValue" in c) return c.stringValue;
+      if ("booleanValue" in c) return Boolean(c.booleanValue);
+      return c;
+    }
+
+    // MAPEAMENTO CLIMÁTICO INTELIGENTE COM SUPORTE A DIA E NOITE
+    function obterIconeClima(codigoWmo, ehDia = null) {
+      if (ehDia === null) {
+        const horaAtual = new Date().getHours();
+        ehDia = (horaAtual >= 6 && horaAtual < 18);
+      }
+
+      // Céu Limpo (Código 0)
+      if (codigoWmo === 0) {
+        return ehDia
+          ? { icone: "ph-sun", texto: "Céu Limpo (Ensolarado)", cor: "#f59e0b" }
+          : { icone: "ph-moon-stars", texto: "Noite Limpa e Estrelada", cor: "#a5b4fc" };
+      }
+
+      // Parcialmente Nublado ou Poucas Nuvens (Códigos 1, 2, 3)
+      if (codigoWmo <= 3) {
+        return ehDia
+          ? { icone: "ph-cloud-sun", texto: "Parcialmente Nublado", cor: "#94a3b8" }
+          : { icone: "ph-cloud-moon", texto: "Noite Parcialmente Nublada", cor: "#818cf8" };
+      }
+
+      // Nevoeiro / Neblina (Códigos 45, 48)
+      if (codigoWmo <= 48) {
+        return { icone: "ph-cloud-fog", texto: "Nevoeiro / Neblina", cor: "#64748b" };
+      }
+
+      // Chuvisco / Chuva Leve (Códigos 51 a 67)
+      if (codigoWmo <= 67) {
+        return { icone: "ph-cloud-rain", texto: "Chuva / Chuvisco", cor: "#38bdf8" };
+      }
+
+      // Pancadas de Chuva (Códigos 80 a 82)
+      if (codigoWmo <= 82) {
+        return { icone: "ph-cloud-rain", texto: "Pancadas de Chuva", cor: "#0284c7" };
+      }
+
+      // Tempestades com Trovoadas (Códigos 95 a 99)
+      return { icone: "ph-cloud-lightning", texto: "Tempestade com Raios", cor: "#ef4444" };
+    }
+
+    // Equação FAO-56 Penman-Monteith
+    function calcularEto(temp, umid, ventoKmH, radWm2) {
+      const u2 = Math.max(0.5, (ventoKmH / 3.6) * 0.75);
+      const p = 101.3 * Math.pow((293.0 - 0.0065 * ALTITUDE_METROS) / 293.0, 5.26);
+      const gamma = 0.665e-3 * p;
+      const es = 0.6108 * Math.exp((17.27 * temp) / (temp + 237.3));
+      const ea = (es * Math.max(1, Math.min(100, umid))) / 100.0;
+      const delta = (4098.0 * es) / Math.pow(temp + 237.3, 2);
+      
+      const rsMj = (radWm2 * 86400.0) / 1000000.0;
+      const rn = Math.max(0, 0.77 * rsMj - 2.5);
+
+      const num = 0.408 * delta * rn + gamma * (900.0 / (temp + 273.0)) * u2 * (es - ea);
+      const den = delta + gamma * (1.0 + 0.34 * u2);
+      return Math.max(0.5, Math.min(10.0, Number((num / den).toFixed(2))));
+    }
+
+    async function buscarHistoricoIoT() {
+      try {
+        const res = await fetch(FIRESTORE_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            structuredQuery: {
+              from: [{ collectionId: "telemetry" }],
+              orderBy: [{ field: { fieldPath: "timestamp" }, direction: "DESCENDING" }],
+              limit: 20
+            }
+          })
+        });
+
+        if (!res.ok) return [];
+        const json = await res.json();
+        if (!json || !Array.isArray(json)) return [];
+
+        return json
+          .filter(item => item && item.document && item.document.fields)
+          .map(item => {
+            const campos = item.document.fields;
+            return {
+              horario: decodificar(campos.horaLeitura) || decodificar(campos.createdAtIso) || "",
+              temp: decodificar(campos.temp),
+              hum: decodificar(campos.hum),
+              pabs: decodificar(campos.pabs),
+              // Sonda 2 = 15 cm | Sonda 1 = 30 cm
+              solo15: decodificar(campos.soilSensor2),
+              solo30: decodificar(campos.soilSensor1) || decodificar(campos.soil),
+              chuva: decodificar(campos.rain),
+              timestamp: new Date(item.document.createTime).getTime()
+            };
+          });
+      } catch (e) {
+        console.warn("Erro ao buscar histórico IoT:", e);
+        return [];
+      }
+    }
+
+    async function buscarDadosSat() {
+      try {
+        const res = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${LATITUDE}&longitude=${LONGITUDE}&current=temperature_2m,relative_humidity_2m,surface_pressure,wind_speed_10m,shortwave_radiation,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto`
+        );
+        if (!res.ok) return null;
+        return await res.json();
+      } catch (e) {
+        console.warn("Erro ao buscar Satélite:", e);
+        return null;
+      }
+    }
+
+    async function atualizarTudo() {
+      const [historicoIoT, sat] = await Promise.all([buscarHistoricoIoT(), buscarDadosSat()]);
+
+      const ultimo = historicoIoT.length > 0 ? historicoIoT[0] : null;
+
+      const t = ultimo?.temp ?? sat?.current?.temperature_2m ?? 24.5;
+      const u = ultimo?.hum ?? sat?.current?.relative_humidity_2m ?? 65.0;
+      const p = ultimo?.pabs ?? sat?.current?.surface_pressure ?? 1013.2;
+      const vento = sat?.current?.wind_speed_10m ?? 8.0;
+      const rad = sat?.current?.shortwave_radiation ?? 0.0;
+
+      const s15 = ultimo?.solo15 != null ? Number(ultimo.solo15).toFixed(1) : "0.0";
+      const s30 = ultimo?.solo30 != null ? Number(ultimo.solo30).toFixed(1) : "0.0";
+      const chovendo = Boolean(ultimo?.chuva);
+
+      const eto = calcularEto(t, u, vento, rad);
+
+      document.getElementById("temperature").textContent = Number(t).toFixed(1);
+      document.getElementById("humidity").textContent = `${Number(u).toFixed(1)}%`;
+      document.getElementById("pressure").textContent = `${Number(p).toFixed(1)} hPa`;
+      document.getElementById("wind-speed").textContent = `${Number(vento).toFixed(1)} km/h`;
+      document.getElementById("solar-radiation").textContent = `${Math.round(rad)} W/m²`;
+      document.getElementById("eto-value").textContent = `${eto} mm/dia`;
+
+      document.getElementById("soil-15").textContent = `${s15}%`;
+      document.getElementById("soil-30").textContent = `${s30}%`;
+
+      // Determinação de Dia / Noite
+      const ehDia = sat?.current?.is_day !== undefined ? (sat.current.is_day === 1) : null;
+      const iconeAtual = obterIconeClima(sat?.current?.weather_code ?? 0, ehDia);
+
+      const precEl = document.getElementById("precipitation");
+      if (chovendo) {
+        precEl.innerHTML = `<span style="color: #38bdf8;">🌧️ Chuva Detectada</span>`;
+        document.getElementById("weather-icon").className = "ph ph-cloud-rain";
+        document.getElementById("weather-icon").style.color = "#38bdf8";
+        document.getElementById("weather-description").textContent = "Precipitação ativa";
+      } else {
+        precEl.innerHTML = `<span style="color: #94a3b8;">☀️ Sem Chuva (Seco)</span>`;
+        document.getElementById("weather-icon").className = `ph ${iconeAtual.icone}`;
+        document.getElementById("weather-icon").style.color = iconeAtual.cor;
+        document.getElementById("weather-description").textContent = iconeAtual.texto;
+      }
+
+      if (ultimo?.horario) {
+        document.getElementById("current-date").textContent = `Última Telemetria: ${ultimo.horario}`;
+      } else {
+        document.getElementById("current-date").textContent = new Date().toLocaleString("pt-BR");
+      }
+
+      // Renderiza a Curva de Tendência de Irrigação (-6h a +6h)
+      renderizarCurvaTendencia(Number(s15), eto, historicoIoT);
+
+      // Renderiza a Previsão dos Próximos 5 Dias do Satélite
+      renderizarPrevisaoDias(sat);
+    }
+
+    function renderizarPrevisaoDias(sat) {
+      const container = document.getElementById("forecast-container");
+      if (!container) return;
+
+      if (!sat || !sat.daily || !sat.daily.time) {
+        container.innerHTML = `<div style="color: #94a3b8; font-size: 12px;">Previsão indisponível no momento.</div>`;
+        return;
+      }
+
+      container.innerHTML = "";
+      const dias = sat.daily.time;
+      const maxs = sat.daily.temperature_2m_max;
+      const mins = sat.daily.temperature_2m_min;
+      const chuvas = sat.daily.precipitation_sum;
+      const codigos = sat.daily.weather_code;
+
+      for (let i = 1; i <= Math.min(5, dias.length - 1); i++) {
+        const dataDia = new Date(dias[i] + "T12:00:00");
+        const diaSemana = dataDia.toLocaleDateString("pt-BR", { weekday: "short" });
+        const diaMes = dataDia.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+        // Para a previsão dos dias futuros usamos sempre o ícone de dia (ehDia = true)
+        const infoClima = obterIconeClima(codigos[i], true);
+
+        const card = document.createElement("div");
+        card.className = "forecast-card";
+        card.innerHTML = `
+          <div class="forecast-day">${diaSemana}</div>
+          <div style="font-size: 10px; color: #64748b;">${diaMes}</div>
+          <i class="ph ${infoClima.icone} forecast-icon" style="color: ${infoClima.cor};"></i>
+          <div class="forecast-temp">${Math.round(maxs[i])}° <span style="font-size: 11px; color: #94a3b8;">${Math.round(mins[i])}°</span></div>
+          <div class="forecast-rain">🌧️ ${chuvas[i].toFixed(1)} mm</div>
+        `;
+        container.appendChild(card);
+      }
+    }
+
+    function renderizarCurvaTendencia(umidadeAtual, etoDiaria, historico) {
+      const labels = ["-6h", "-5h", "-4h", "-3h", "-2h", "-1h", "Agora", "+1h", "+2h", "+3h", "+4h", "+5h", "+6h"];
+      const valorBaseAgora = (umidadeAtual > 1.0) ? umidadeAtual : 13.5;
+      const perdaPorHora = Math.max(0.12, (etoDiaria * 0.40) / 12.0);
+
+      // Metade Passada
+      const dadosObservados = [];
+      for (let i = 6; i >= 1; i--) {
+        const valPassado = Math.min(CAPACIDADE_DE_CAMPO + 2.0, valorBaseAgora + (i * perdaPorHora * 0.95));
+        dadosObservados.push(Number(valPassado.toFixed(1)));
+      }
+      dadosObservados.push(Number(valorBaseAgora.toFixed(1)));
+      for (let i = 1; i <= 6; i++) dadosObservados.push(null);
+
+      // Metade Futura
+      const dadosProjetados = [];
+      for (let i = 0; i < 6; i++) dadosProjetados.push(null);
+      dadosProjetados.push(Number(valorBaseAgora.toFixed(1)));
+
+      let horasAteEstresse = null;
+      for (let i = 1; i <= 6; i++) {
+        const valFuturo = Math.max(PONTO_MURCHA_PERM, valorBaseAgora - (i * perdaPorHora));
+        dadosProjetados.push(Number(valFuturo.toFixed(1)));
+        if (horasAteEstresse === null && valFuturo <= LIMIAR_ESTRESSE_CRITICO) {
+          horasAteEstresse = i;
+        }
+      }
+
+      // Badge de Manejo
+      const badge = document.getElementById("irrigation-status-badge");
+      if (umidadeAtual <= 0.5) {
+        badge.textContent = `Aguardando solo (Simulando dinâmica com ETo = ${etoDiaria} mm/dia)`;
+        badge.style.background = "#475569";
+        badge.style.color = "#fff";
+      } else if (valorBaseAgora < LIMIAR_ESTRESSE_CRITICO) {
+        badge.textContent = `🚨 ESTRESSE HÍDRICO ATIVO (< ${LIMIAR_ESTRESSE_CRITICO}%) - IRRIGAR IMEDIATAMENTE!`;
+        badge.style.background = "#ef4444";
+        badge.style.color = "#fff";
+      } else if (horasAteEstresse !== null) {
+        badge.textContent = `⚠️ Atingirá Estresse Crítico (${LIMIAR_ESTRESSE_CRITICO}%) em aproximadamente ${horasAteEstresse} horas`;
+        badge.style.background = "#eab308";
+        badge.style.color = "#000";
+      } else {
+        badge.textContent = `✅ Solo Seguro (Acima do Limiar Crítico nas próximas 6 horas)`;
+        badge.style.background = "#10b981";
+        badge.style.color = "#fff";
+      }
+
+      // Renderiza Chart.js
+      const canvas = document.getElementById("moisture-chart");
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+
+      if (chartInstancia) {
+        chartInstancia.destroy();
+      }
+
+      chartInstancia = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: "Histórico Observado",
+              data: dadosObservados,
+              borderColor: "#10b981",
+              backgroundColor: "rgba(16, 185, 129, 0.1)",
+              borderWidth: 3,
+              tension: 0.3,
+              fill: true,
+              pointRadius: [3, 3, 3, 3, 3, 3, 6, 0, 0, 0, 0, 0, 0],
+              pointBackgroundColor: "#10b981"
+            },
+            {
+              label: "Tendência Projetada",
+              data: dadosProjetados,
+              borderColor: "#38bdf8",
+              backgroundColor: "rgba(56, 189, 248, 0.08)",
+              borderWidth: 2.5,
+              borderDash: [6, 4],
+              tension: 0.3,
+              fill: true,
+              pointRadius: [0, 0, 0, 0, 0, 0, 6, 3, 3, 3, 3, 3, 3],
+              pointBackgroundColor: "#38bdf8"
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
+          scales: {
+            y: {
+              min: 4,
+              max: 18,
+              ticks: { color: "#94a3b8", stepSize: 2 },
+              grid: { color: "#1e293b" },
+              title: { display: true, text: "Umidade do Solo (%)", color: "#64748b", font: { size: 10 } }
+            },
+            x: {
+              ticks: {
+                color: (ctx) => (ctx.tick.label === "Agora" ? "#38bdf8" : "#94a3b8"),
+                font: (ctx) => (ctx.tick.label === "Agora" ? { weight: "bold", size: 12 } : { size: 10 })
+              },
+              grid: { color: (ctx) => (ctx.tick?.label === "Agora" ? "rgba(56, 189, 248, 0.3)" : "#1e293b") }
+            }
+          },
+          plugins: {
+            legend: { display: false },
+            annotation: {
+              annotations: {
+                linhaCC: {
+                  type: "line",
+                  yMin: CAPACIDADE_DE_CAMPO,
+                  yMax: CAPACIDADE_DE_CAMPO,
+                  borderColor: "#10b981",
+                  borderWidth: 1.5,
+                  borderDash: [5, 4],
+                  label: {
+                    display: true,
+                    content: `CC (${CAPACIDADE_DE_CAMPO}%)`,
+                    position: "end",
+                    backgroundColor: "rgba(16, 185, 129, 0.8)",
+                    color: "#fff",
+                    font: { size: 9, weight: "bold" }
+                  }
+                },
+                linhaCritico: {
+                  type: "line",
+                  yMin: LIMIAR_ESTRESSE_CRITICO,
+                  yMax: LIMIAR_ESTRESSE_CRITICO,
+                  borderColor: "#ef4444",
+                  borderWidth: 2,
+                  borderDash: [4, 3],
+                  label: {
+                    display: true,
+                    content: `Estresse (${LIMIAR_ESTRESSE_CRITICO}%)`,
+                    position: "start",
+                    backgroundColor: "rgba(239, 68, 68, 0.85)",
+                    color: "#fff",
+                    font: { size: 9, weight: "bold" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // ATUALIZAÇÃO AUTOMÁTICA DA TELA A CADA 15 SEGUNDOS
+    window.addEventListener("DOMContentLoaded", () => {
+      atualizarTudo();
+      setInterval(atualizarTudo, 15000); // Consulta e atualiza a tela a cada 15 segundos
+    });
+  </script>
+</body>
+</html>
